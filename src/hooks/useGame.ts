@@ -7,6 +7,7 @@ const socket = io("http://localhost:4000");
 interface GameState {
   gameStatus: string;
   playerName: string;
+  playerId: number;
 }
 
 export const useGame = (): GameState => {
@@ -14,13 +15,14 @@ export const useGame = (): GameState => {
   const [gameStatus, setGameStatus] = useState<string>(
     "Waiting for another player..."
   );
+  const [playerId, setPlayerId] = useState<number>(0);
 
   useEffect(() => {
     if (playerName) {
-      socket.emit("joinGame", { playerName, socketId: socket.id });
+      socket.emit("joinGame", { playerName });
 
-      socket.on("gameUpdate", (data: string) => {
-        setGameStatus(data);
+      socket.on("gameUpdate", (status: string) => {
+        setGameStatus(status);
       });
 
       socket.on("gameStart", (data: string) => {
@@ -34,5 +36,11 @@ export const useGame = (): GameState => {
     }
   }, [playerName]);
 
-  return { gameStatus, playerName: playerName || "" };
+  useEffect(() => {
+    if (playerName) {
+      setPlayerId(Math.random() > 0.5 ? 1 : 2);
+    }
+  }, [playerName]);
+
+  return { gameStatus, playerName: playerName!, playerId };
 };

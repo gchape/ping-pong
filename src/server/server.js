@@ -23,20 +23,25 @@ app.use(
 );
 
 let players = [];
+
 io.on("connection", (socket) => {
-  console.log("A player connected");
+  console.log(`A player connected: ${socket.id}`);
 
   socket.on("joinGame", (data) => {
+    const { playerName } = data;
+
     if (players.length < 2) {
-      players.push(data);
-      console.log(`${data.playerName} has joined the game`);
+      players.push({ playerName, socketId: socket.id });
+      console.log(`${playerName} has joined the game`);
+
+      socket.emit("joinGame", `${playerName} has joined the game`);
 
       if (players.length === 2) {
         io.emit("gameStart", "Both players have joined! The game is starting!");
       } else {
         io.emit(
           "gameUpdate",
-          `${data.playerName} has joined the game! Waiting for another player...`
+          `${playerName} has joined the game! Waiting for another player...`
         );
       }
     } else {
@@ -44,11 +49,22 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("paddleMove", (data) => {
+    const { playerId, position } = data;
+    console.log(`Player ${playerId} moved paddle to position: ${position}`);
+
+    socket.broadcast.emit("opponentPaddleMove", { playerId, position });
+  });
+
   socket.on("disconnect", () => {
-    console.log("A player disconnected");
+    const playerName = players.find(
+      (player) => player.socketId === socket.id
+    )?.playerName;
 
     players = players.filter((player) => player.socketId !== socket.id);
-    io.emit("gameUpdate", "A player has disconnected.");
+
+    console.log(`${playerName} has disconnected`);
+    io.emit("gameUpdate", `${playerName} has disconnected`);
   });
 });
 
